@@ -33,13 +33,13 @@ async function fetchRecipeImage(recipeName) {
     const searchQuery = `${recipeName}`;
     const response = await fetch(
       `https://api.unsplash.com/search/photos?query=${encodeURIComponent(
-        searchQuery
+        searchQuery,
       )}&per_page=1&orientation=landscape`,
       {
         headers: {
           Authorization: `Client-ID ${UNSPLASH_ACCESS_KEY}`,
         },
-      }
+      },
     );
 
     if (!response.ok) {
@@ -85,14 +85,14 @@ export async function getOrGenerateRecipe(formData) {
     // Step 1: Check if recipe already exists in DB (case-insensitive search)
     const searchResponse = await fetch(
       `${STRAPI_URL}/api/recipes?filters[title][$eqi]=${encodeURIComponent(
-        normalizedTitle
+        normalizedTitle,
       )}&populate=*`,
       {
         headers: {
           Authorization: `Bearer ${STRAPI_API_TOKEN}`,
         },
         cache: "no-store",
-      }
+      },
     );
 
     if (searchResponse.ok) {
@@ -109,7 +109,7 @@ export async function getOrGenerateRecipe(formData) {
               Authorization: `Bearer ${STRAPI_API_TOKEN}`,
             },
             cache: "no-store",
-          }
+          },
         );
 
         let isSaved = false;
@@ -224,6 +224,15 @@ Guidelines:
     // FORCE the title to be our normalized version
     recipeData.title = normalizedTitle;
 
+    // ✅ ADD THESE LINES RIGHT HERE
+    if (!recipeData.ingredients?.length) {
+      throw new Error("Invalid AI response: ingredients missing");
+    }
+
+    if (!recipeData.instructions?.length) {
+      throw new Error("Invalid AI response: instructions missing");
+    }
+
     // Validate and sanitize category
     const validCategories = [
       "breakfast",
@@ -233,7 +242,7 @@ Guidelines:
       "dessert",
     ];
     const category = validCategories.includes(
-      recipeData.category?.toLowerCase()
+      recipeData.category?.toLowerCase(),
     )
       ? recipeData.category.toLowerCase()
       : "dinner";
@@ -272,30 +281,55 @@ Guidelines:
     const imageUrl = await fetchRecipeImage(normalizedTitle);
 
     // Step 4: Save generated recipe to database
+    // const strapiRecipeData = {
+    //   data: {
+    //     title: normalizedTitle,
+    //     description: recipeData.description,
+    //     cuisine,
+    //     category,
+    //     ingredients: recipeData.ingredients,
+    //     instructions: recipeData.instructions,
+    //     prepTime: Number(recipeData.prepTime),
+    //     cookTime: Number(recipeData.cookTime),
+    //     servings: Number(recipeData.servings),
+    //     nutrition: recipeData.nutrition,
+    //     tips: recipeData.tips,
+    //     substitutions: recipeData.substitutions,
+    //     imageUrl: imageUrl || "",
+    //     isPublic: true,
+    //     author: user.id,
+    //   },
+    // };
     const strapiRecipeData = {
       data: {
         title: normalizedTitle,
-        description: recipeData.description,
+        description: recipeData.description || "",
         cuisine,
         category,
-        ingredients: recipeData.ingredients,
-        instructions: recipeData.instructions,
-        prepTime: Number(recipeData.prepTime),
-        cookTime: Number(recipeData.cookTime),
-        servings: Number(recipeData.servings),
-        nutrition: recipeData.nutrition,
-        tips: recipeData.tips,
-        substitutions: recipeData.substitutions,
+        ingredients: recipeData.ingredients || [],
+        instructions: recipeData.instructions || [],
+        prepTime: parseInt(recipeData.prepTime) || 0,
+        cookTime: parseInt(recipeData.cookTime) || 0,
+        servings: parseInt(recipeData.servings) || 1,
+        nutrition: recipeData.nutrition || {},
+        tips: recipeData.tips || [],
+        substitutions: recipeData.substitutions || [],
         imageUrl: imageUrl || "",
         isPublic: true,
-        author: user.id,
+        author:user.id,
       },
     };
 
-    console.log(
-      "📤 Saving new recipe to database with title:",
-      normalizedTitle
-    );
+    // console.log(
+    //   "📤 Saving new recipe to database with title:",
+    //   normalizedTitle,
+    // );
+
+    // ✅ ADD THIS LINE HERE
+    // console.log(
+    //   "📦 STRAPI PAYLOAD:",
+    //   JSON.stringify(strapiRecipeData, null, 2),
+    // );
 
     const createRecipeResponse = await fetch(`${STRAPI_URL}/api/recipes`, {
       method: "POST",
@@ -358,7 +392,7 @@ export async function saveRecipeToCollection(formData) {
           Authorization: `Bearer ${STRAPI_API_TOKEN}`,
         },
         cache: "no-store",
-      }
+      },
     );
 
     if (existingResponse.ok) {
@@ -430,7 +464,7 @@ export async function removeRecipeFromCollection(formData) {
           Authorization: `Bearer ${STRAPI_API_TOKEN}`,
         },
         cache: "no-store",
-      }
+      },
     );
 
     if (!searchResponse.ok) {
@@ -455,7 +489,7 @@ export async function removeRecipeFromCollection(formData) {
         headers: {
           Authorization: `Bearer ${STRAPI_API_TOKEN}`,
         },
-      }
+      },
     );
 
     if (!deleteResponse.ok) {
@@ -499,7 +533,7 @@ export async function getRecipesByPantryIngredients() {
         throw new Error(
           `Monthly AI recipe limit reached. ${
             isPro ? "Please contact support." : "Upgrade to Pro!"
-          }`
+          }`,
         );
       }
       throw new Error("Request denied");
@@ -513,7 +547,7 @@ export async function getRecipesByPantryIngredients() {
           Authorization: `Bearer ${STRAPI_API_TOKEN}`,
         },
         cache: "no-store",
-      }
+      },
     );
 
     if (!pantryResponse.ok) {
@@ -576,7 +610,7 @@ Rules:
     } catch (parseError) {
       console.error("Failed to parse Gemini response:", text);
       throw new Error(
-        "Failed to generate recipe suggestions. Please try again."
+        "Failed to generate recipe suggestions. Please try again.",
       );
     }
 
@@ -609,7 +643,7 @@ export async function getSavedRecipes() {
           Authorization: `Bearer ${STRAPI_API_TOKEN}`,
         },
         cache: "no-store",
-      }
+      },
     );
 
     if (!response.ok) {
