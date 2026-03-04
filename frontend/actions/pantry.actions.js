@@ -1,4 +1,4 @@
-"use server"
+"use server";
 import { checkUser } from "@/lib/checkUser";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { freePantryScans, proTierLimit } from "@/lib/arcjet";
@@ -11,14 +11,14 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-export async function scanPantryImage(formData){
-    try {
-        const user = await checkUser();
+export async function scanPantryImage(formData) {
+  try {
+    const user = await checkUser();
     if (!user) {
       throw new Error("User not authenticated");
     }
     const isPro = user.subscriptionTier === "pro";
-    const arcjetClient =isPro ? proTierLimit : freePantryScans;
+    const arcjetClient = isPro ? proTierLimit : freePantryScans;
 
     // Create a request object for Arcjet
     const req = await request();
@@ -35,13 +35,20 @@ export async function scanPantryImage(formData){
             isPro
               ? "Please contact support if you need more scans."
               : "Upgrade to Pro for unlimited scans!"
-          }`
+          }`,
         );
       }
       throw new Error("Request denied by security system");
     }
 
     const imageFile = formData.get("image");
+
+    console.log("Image size:", imageFile.size);
+    console.log("Image type:", imageFile.type);
+
+    if (imageFile.size > 4 * 1024 * 1024) {
+      throw new Error("Image too large. Please upload a photo under 4MB.");
+    }
     if (!imageFile) {
       throw new Error("No image provided");
     }
@@ -51,6 +58,15 @@ export async function scanPantryImage(formData){
     const buffer = Buffer.from(bytes);
     const base64Image = buffer.toString("base64");
 
+    if (!imageFile.type.startsWith("image/")) {
+      throw new Error("Invalid file type. Please upload an image.");
+    }
+
+    if (imageFile.type === "image/heic" || imageFile.type === "image/heif") {
+      throw new Error(
+        "HEIC images are not supported. Please upload JPG or PNG.",
+      );
+    }
     // Call Gemini Vision API
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
@@ -73,6 +89,7 @@ Rules:
 - Confidence should be 0.7-1.0 (omit items below 0.7)
 - Maximum 20 items
 - Common pantry staples are acceptable (salt, pepper, oil)
+-If the image contains no visible food ingredients, return an empty JSON array [].
 `;
 
     const result = await model.generateContent([
@@ -103,7 +120,7 @@ Rules:
 
     if (!Array.isArray(ingredients) || ingredients.length === 0) {
       throw new Error(
-        "No ingredients detected in the image. Please try a clearer photo."
+        "No ingredients detected in the image. Please try a clearer photo.",
       );
     }
 
@@ -113,11 +130,10 @@ Rules:
       scansLimit: isPro ? "unlimited" : 10,
       message: `Found ${ingredients.length} ingredients!`,
     };
-
-    } catch (error) {
-        console.error("Error scanning pantry:", error);
-        throw new Error(error.message || "Failed to scan image");       
-    }
+  } catch (error) {
+    console.error("Error scanning pantry:", error);
+    throw new Error(error.message || "Failed to scan image");
+  }
 }
 
 // Save ingredients to pantry
@@ -221,7 +237,6 @@ export async function addPantryItemManually(formData) {
   }
 }
 
-
 // Get user's pantry items
 export async function getPantryItems() {
   try {
@@ -237,7 +252,7 @@ export async function getPantryItems() {
           Authorization: `Bearer ${STRAPI_API_TOKEN}`,
         },
         cache: "no-store",
-      }
+      },
     );
 
     if (!response.ok) {
