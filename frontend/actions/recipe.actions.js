@@ -165,7 +165,7 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
     }
   ],
   "nutrition": {
-    "calories": "calories per serving",
+    "calories": "kcal",
     "protein": "grams",
     "carbs": "grams",
     "fat": "grams"
@@ -221,6 +221,22 @@ Guidelines:
       throw new Error("Failed to generate recipe. Please try again.");
     }
 
+    // 🔧 SANITIZE INGREDIENT CATEGORIES
+    const validIngredientCategories = [
+      "Protein",
+      "Vegetable",
+      "Spice",
+      "Dairy",
+      "Grain",
+      "Other",
+    ];
+
+    recipeData.ingredients = recipeData.ingredients.map((ing) => ({
+      ...ing,
+      category: validIngredientCategories.includes(ing.category)
+        ? ing.category
+        : "Other",
+    }));
     // FORCE the title to be our normalized version
     recipeData.title = normalizedTitle;
 
@@ -316,20 +332,20 @@ Guidelines:
         substitutions: recipeData.substitutions || [],
         imageUrl: imageUrl || "",
         isPublic: true,
-        author:user.id,
+        author: user.id,
       },
     };
 
-    // console.log(
-    //   "📤 Saving new recipe to database with title:",
-    //   normalizedTitle,
-    // );
+    console.log(
+      "📤 Saving new recipe to database with title:",
+      normalizedTitle,
+    );
 
     // ✅ ADD THIS LINE HERE
-    // console.log(
-    //   "📦 STRAPI PAYLOAD:",
-    //   JSON.stringify(strapiRecipeData, null, 2),
-    // );
+    console.log(
+      "📦 STRAPI PAYLOAD:",
+      JSON.stringify(strapiRecipeData, null, 2),
+    );
 
     const createRecipeResponse = await fetch(`${STRAPI_URL}/api/recipes`, {
       method: "POST",
