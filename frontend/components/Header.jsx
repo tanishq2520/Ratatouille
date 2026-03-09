@@ -9,15 +9,56 @@ import React from "react";
 import { Button } from "./ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import {Cookie, Refrigerator, Sparkles } from "lucide-react";
+import { Cookie, Refrigerator, Sparkles, UtensilsCrossed } from "lucide-react";
 import { Badge } from "./ui/badge";
 import UserDropdown from "./UserDropdown";
 import { checkUser } from "@/lib/checkUser";
 import PricingModal from "./PricingModal";
 import HowToCookModal from "./HowToCookModal";
+import { headers } from "next/headers";
+
+// Fetch remaining recipe credits (server-side, no token consumed)
+async function getRecipeCredits(user) {
+  if (!user || user.subscriptionTier === "pro") {
+    return { isPro: true, tokensRemaining: null, capacity: null };
+  }
+
+  try {
+    const headersList = await headers();
+    const host = headersList.get("host") || "localhost:3000";
+    const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+    const baseUrl = `${protocol}://${host}`;
+
+    const res = await fetch(`${baseUrl}/api/recipe-credits`, {
+      cache: "no-store",
+      // Forward cookies so auth works
+      headers: {
+        cookie: headersList.get("cookie") || "",
+      },
+    });
+
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (e) {
+    console.error("Failed to fetch recipe credits:", e);
+  }
+
+  // Fail open
+  return { isPro: false, tokensRemaining: 5, capacity: 5 };
+}
 
 const Header = async () => {
-  const user = await checkUser(); // Replace with actual user data from Clerk
+  const user = await checkUser();
+  const credits = await getRecipeCredits(user);
+
+  // Credit badge color based on remaining
+  const getCreditColor = (remaining) => {
+    if (remaining >= 3) return "text-emerald-600 bg-emerald-50 border-emerald-200";
+    if (remaining >= 1) return "text-amber-600 bg-amber-50 border-amber-200";
+    return "text-red-600 bg-red-50 border-red-200";
+  };
+
   return (
     <header className="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-7xl z-50 animate-in fade-in slide-in-from-top-4 duration-700">
       <nav className="h-16 px-6 flex items-center justify-between bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-full">
@@ -27,7 +68,7 @@ const Header = async () => {
             alt="Ratatouille logo"
             width={70}
             height={70}
-            className="w-16 h-16 object-contain drop-shadow-sm -ml-2 mr-1" /* Increased from w-12 h-12 and adjusted margins */
+            className="w-16 h-16 object-contain drop-shadow-sm -ml-2 mr-1"
           />
           <span className="font-extrabold text-2xl tracking-tighter bg-gradient-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent hidden sm:block">
             Ratatouille
@@ -53,14 +94,37 @@ const Header = async () => {
         <div className="flex items-center space-x-3">
           <SignedIn>
             <HowToCookModal/>
+
+            {/* Recipe Credits Badge — Free users only */}
+            {user && !credits.isPro && credits.tokensRemaining !== null && (
+              <PricingModal subscriptionTier={user.subscriptionTier}>
+                <div
+                  title={
+                    credits.tokensRemaining === 0
+                      ? "No recipe credits left today — upgrade to Pro for unlimited!"
+                      : `${credits.tokensRemaining} of ${credits.capacity} daily recipe credits remaining`
+                  }
+                  className={`flex h-9 px-3 gap-1.5 rounded-full text-sm font-semibold border items-center cursor-pointer transition-all hover:scale-105 select-none ${getCreditColor(credits.tokensRemaining)}`}
+                >
+                  <UtensilsCrossed className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span>
+                    {credits.tokensRemaining}/{credits.capacity}
+                  </span>
+                  <span className="hidden sm:inline text-xs font-medium opacity-80">
+                    {credits.tokensRemaining === 1 ? "credit" : "credits"}
+                  </span>
+                </div>
+              </PricingModal>
+            )}
+
             {user && (
               <PricingModal subscriptionTier={user.subscriptionTier}>
                 <Badge
                   variant="outline"
-                  className={`flex h-9 px-4 gap-2 rounded-full text-sm font-semibold transition-all hover:scale-105 ${
+                  className={`flex h-9 px-4 gap-2 rounded-full text-sm font-semibold transition-all hover:scale-105 cursor-pointer ${
                     user.subscriptionTier === "pro"
-                      ? "bg-gradient-to-r from-orange-600 to-amber-500 text-white border-none shadow-orange-500/25 shadow-lg"
-                      : "bg-stone-100 text-stone-600 border-stone-200 cursor-pointer hover:bg-stone-200 hover:border-stone-300"
+                      ? "bg-gradient-to-r from-orange-600 to-amber-500 text-white border-none shadow-orange-500/25 shadow-lg hover:shadow-orange-500/40"
+                      : "bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200 hover:border-stone-300"
                   }`}
                 >
                   <Sparkles

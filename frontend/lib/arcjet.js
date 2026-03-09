@@ -39,6 +39,17 @@ export const freeMealRecommendations = aj.withRule(
   })
 );
 
+// Free tier detailed recipe generation (5 per day, renews every 24 hours)
+export const freeRecipeGeneration = aj.withRule(
+  tokenBucket({
+    mode: "LIVE",
+    characteristics: ["userId"], // Track by Clerk user ID
+    refillRate: 5, // 5 tokens
+    interval: "1d", // per day (refreshes every 24 hours)
+    capacity: 5, // max 5 tokens
+  })
+);
+
 // Pro tier - effectively unlimited (very high limits)
 // 1000 requests per day should be more than enough for any user
 export const proTierLimit = aj.withRule(

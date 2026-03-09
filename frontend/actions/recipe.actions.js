@@ -2,7 +2,7 @@
 
 import { checkUser } from "@/lib/checkUser";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { freeMealRecommendations, proTierLimit } from "@/lib/arcjet";
+import { freeMealRecommendations, freeRecipeGeneration, proTierLimit } from "@/lib/arcjet";
 import { request } from "@arcjet/next";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -125,13 +125,48 @@ export async function getOrGenerateRecipe(formData) {
           isSaved: isSaved,
           fromDatabase: true,
           isPro,
+          tokensRemaining: null, // cache hit — no token consumed, we don't peek here
           message: "Recipe loaded from database",
         };
       }
     }
 
-    // Step 2: Recipe doesn't exist, generate with Gemini
-    console.log("🤖 Recipe not found, generating with Gemini...");
+    // Step 2: Recipe doesn't exist, apply rate limit then generate with Gemini
+    console.log("🤖 Recipe not found, checking rate limit...");
+
+    // ✅ Arcjet rate limit: Free = 5/day, Pro = effectively unlimited
+    const arcjetClient = isPro ? proTierLimit : freeRecipeGeneration;
+    const req = await request();
+    const decision = await arcjetClient.protect(req, {
+      userId: user.clerkId,
+      requested: 1,
+    });
+
+    // Remaining tokens after this consumption attempt
+    const tokensRemaining = isPro
+      ? null
+      : Math.max(0, (decision.reason?.remaining ?? 4));
+
+    if (decision.isDenied()) {
+      if (decision.reason.isRateLimit()) {
+        return {
+          success: false,
+          rateLimited: true,
+          tokensRemaining: 0,
+          isPro,
+          message: isPro
+            ? "Request limit reached. Please contact support."
+            : "You've used all 5 recipe credits for today. Come back tomorrow or upgrade to Pro!",
+        };
+      }
+      return {
+        success: false,
+        rateLimited: false,
+        message: "Request denied.",
+      };
+    }
+
+    console.log("🤖 Rate limit OK, generating with Gemini...");
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
@@ -377,6 +412,7 @@ Guidelines:
       recipeId: createdRecipe.data.id,
       isSaved: false,
       fromDatabase: false,
+      tokensRemaining,
       recommendationsLimit: isPro ? "unlimited" : 5,
       isPro,
       message: "Recipe generated and saved successfully!",

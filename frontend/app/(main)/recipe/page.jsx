@@ -16,6 +16,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Download,
+  Zap,
+  CalendarClock,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -32,6 +34,7 @@ import { PDFDownloadLink } from "@react-pdf/renderer";
 import { RecipePDF } from "@/components/RecipePDF";
 import { ClockLoader } from "react-spinners";
 import ProLockedSection from "@/components/ProLockedSection";
+import PricingModal from "@/components/PricingModal";
 
 function RecipeContent() {
   const searchParams = useSearchParams();
@@ -41,6 +44,7 @@ function RecipeContent() {
   const [recipe, setRecipe] = useState(null);
   const [recipeId, setRecipeId] = useState(null);
   const [isSaved, setIsSaved] = useState(false);
+  const [isRateLimited, setIsRateLimited] = useState(false);
 
   // Get or generate recipe
   const {
@@ -74,6 +78,10 @@ function RecipeContent() {
 
   // Update recipe when data arrives
   useEffect(() => {
+    if (recipeData?.rateLimited) {
+      setIsRateLimited(true);
+      return;
+    }
     if (recipeData?.success) {
       setRecipe(recipeData.recipe);
       setRecipeId(recipeData.recipeId);
@@ -140,6 +148,86 @@ function RecipeContent() {
               Go to Dashboard
             </Button>
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Rate limited state — daily credits exhausted
+  if (isRateLimited) {
+    return (
+      <div className="min-h-screen bg-stone-50 pt-24 pb-16 px-4">
+        <div className="container mx-auto max-w-2xl text-center py-20">
+          {/* Icon */}
+          <div className="relative mx-auto mb-8 w-24 h-24">
+            <div className="absolute inset-0 rounded-full bg-amber-100 animate-ping opacity-40" />
+            <div className="relative flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 border-2 border-amber-200">
+              <CalendarClock className="w-11 h-11 text-amber-600" />
+            </div>
+          </div>
+
+          <h2 className="text-3xl font-bold text-stone-900 mb-3 tracking-tight">
+            Daily Limit Reached
+          </h2>
+          <p className="text-stone-600 font-light mb-2 text-lg">
+            You&apos;ve used all{" "}
+            <span className="font-semibold text-orange-600">5 recipe credits</span>{" "}
+            for today.
+          </p>
+          <p className="text-stone-500 text-sm mb-10">
+            Credits refresh every 24 hours — or upgrade to{" "}
+            <span className="font-semibold text-orange-600">Pro</span> for
+            unlimited recipe generation.
+          </p>
+
+          {/* Divider */}
+          <div className="flex items-center gap-4 mb-8">
+            <div className="flex-1 h-px bg-stone-200" />
+            <span className="text-xs text-stone-400 uppercase tracking-widest font-medium">your options</span>
+            <div className="flex-1 h-px bg-stone-200" />
+          </div>
+
+          {/* CTA Cards */}
+          <div className="grid sm:grid-cols-2 gap-4 mb-8">
+            {/* Come back tomorrow */}
+            <div className="bg-white border-2 border-stone-200 p-6 text-left">
+              <CalendarClock className="w-7 h-7 text-stone-400 mb-3" />
+              <h3 className="font-bold text-stone-900 mb-1">Come Back Tomorrow</h3>
+              <p className="text-stone-500 text-sm font-light">
+                Your 5 credits reset automatically every day. Browse your saved
+                recipes in the meantime!
+              </p>
+            </div>
+
+            {/* Upgrade to Pro */}
+            <div className="bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 p-6 text-left">
+              <Zap className="w-7 h-7 text-orange-500 fill-orange-400 mb-3" />
+              <h3 className="font-bold text-stone-900 mb-1">Go Pro — Unlimited</h3>
+              <p className="text-stone-500 text-sm font-light">
+                Generate as many detailed recipes as you want, every day, with
+                no limits.
+              </p>
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button
+              onClick={() => router.push("/dashboard")}
+              variant="outline"
+              className="border-2 border-stone-900 hover:bg-stone-900 hover:text-white gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Dashboard
+            </Button>
+
+            <PricingModal subscriptionTier="free">
+              <Button className="bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-700 hover:to-amber-600 text-white gap-2 shadow-lg shadow-orange-500/30">
+                <Zap className="w-4 h-4 fill-white/60" />
+                Upgrade to Pro
+              </Button>
+            </PricingModal>
+          </div>
         </div>
       </div>
     );

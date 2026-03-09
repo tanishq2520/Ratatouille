@@ -1,12 +1,16 @@
 "use client";
 
-import { PricingTable } from "@clerk/nextjs";
+import { PricingTable, useUser } from "@clerk/nextjs";
 import React, { useEffect, useState, useRef } from "react";
 import { Badge } from "./ui/badge";
 
-const PricingSection = () => {
+const PricingSection = ({ onPlanChange }) => {
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef(null);
+  const { user } = useUser();
+
+  // Track the subscription tier so we can detect when it changes
+  const prevTierRef = useRef(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -24,6 +28,37 @@ const PricingSection = () => {
     }
     return () => observer.disconnect();
   }, []);
+
+  // Detect plan changes from Clerk's user object and notify parent
+  useEffect(() => {
+    if (!user) return;
+
+    // Clerk stores subscription metadata in publicMetadata or via has() checks
+    // We listen to changes in the user's publicMetadata or sessionClaims
+    const currentPlan = user.publicMetadata?.plan ?? "free";
+
+    if (prevTierRef.current !== null && prevTierRef.current !== currentPlan) {
+      // Plan has changed — sync with backend and reload
+      syncPlanWithBackend(currentPlan).then(() => {
+        if (onPlanChange) onPlanChange(currentPlan);
+      });
+    }
+
+    prevTierRef.current = currentPlan;
+  }, [user?.publicMetadata, onPlanChange]);
+
+  // Sync the new plan to Strapi backend
+  const syncPlanWithBackend = async (newPlan) => {
+    try {
+      await fetch("/api/sync-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: newPlan }),
+      });
+    } catch (e) {
+      console.error("Failed to sync plan:", e);
+    }
+  };
 
   return (
     <div ref={sectionRef} className="max-w-6xl mx-auto relative group">
