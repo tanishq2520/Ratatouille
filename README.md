@@ -24,7 +24,7 @@ The platform also includes a **Free vs Pro plan system**:
 
 # 🎬 Demo
 
-![App Demo](public/Demo.gif)
+![App Demo](frontend/public/Demo.gif)
 
 This short demo shows:
 - Entering ingredients
@@ -37,7 +37,7 @@ This short demo shows:
 
 ## Landing Page
 
-![Landing Page](public/landing_page.png)
+![Landing Page](frontend/public/landing_page.png)
 
 The landing page introduces the platform and allows users to quickly start generating recipes.
 
@@ -45,7 +45,7 @@ The landing page introduces the platform and allows users to quickly start gener
 
 ## Recipe Generation
 
-![Recipe Output](public/Recipe.png)
+![Recipe Output](frontend/public/Recipe.png)
 
 Users receive a fully structured recipe including:
 - Ingredients
@@ -57,7 +57,7 @@ Users receive a fully structured recipe including:
 
 ## Saved Recipes
 
-![Saved Recipes](public/Saved_recipes.png)
+![Saved Recipes](frontend/public/Saved_recipes.png)
 
 Users can store generated recipes for future use and revisit them anytime.
 
