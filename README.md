@@ -18,7 +18,7 @@ The platform also includes a **Free vs Pro plan system**:
 
 # 🚀 Live Demo
 
-🔗 Add your deployed link here
+https://cooksyy.vercel.app
 
 ---
 
@@ -37,7 +37,7 @@ This short demo shows:
 
 ## Landing Page
 
-![Landing Page](frontend/public/landing_page.png)
+![Landing Page](frontend/public/land.png)
 
 The landing page introduces the platform and allows users to quickly start generating recipes.
 
@@ -57,7 +57,7 @@ Users receive a fully structured recipe including:
 
 ## Saved Recipes
 
-![Saved Recipes](frontend/public/Saved_recipes.png)
+![Saved Recipes](frontend/public/Saved_recipe.png)
 
 Users can store generated recipes for future use and revisit them anytime.
 
