@@ -124,4 +124,4 @@ Free users can generate up to **5 recipes**, while Pro users get **unlimited gen
 Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/ratatouille-ai-recipes.git
+git clone https://github.com/tanishq2520/Ratatouille.git
